@@ -1,4 +1,4 @@
-from rest_framework.serializers import ModelSerializer, SerializerMethodField
+from rest_framework.serializers import ModelSerializer, SerializerMethodField, ValidationError
 from shop.models import Article, Category, Product
 
 
@@ -6,6 +6,20 @@ class CategoryListSerializer(ModelSerializer):
     class Meta:
         model = Category
         fields = ['id', 'name', 'date_created', 'date_updated']
+
+    def validate_name(self, value):
+        # Nous vérifions que la catégorie existe
+        if Category.objects.filter(name=value).exists():
+            # En cas d'erreur, DRF nous met à disposition l'exception ValidationError
+            raise ValidationError('Category already exists')
+        return value
+
+    def validate(self, data):
+        # Effectuons le contrôle sur la présence du nom dans la description
+        if data['name'] not in data['description']:
+            # Levons une ValidationError si ce n'est pas le cas
+            raise ValidationError('Name must be in description')
+        return data
 
 class CategoryDetailSerializer(ModelSerializer):
     # En utilisant un 'SerializerMethodField', il est nécessaire d'écrire une méthode nommée 'get_XXX' où XXX est le nom de l'attribut, ici 'products'
@@ -30,13 +44,13 @@ class CategoryDetailSerializer(ModelSerializer):
 class ProductListSerializer(ModelSerializer):
     class Meta:
         model = Product
-        fields = ['id', 'name', 'date_created', 'date_updated']
+        fields = ['id', 'name', 'date_created', 'date_updated', 'ecoscore']
 
 class ProductDetailSerializer(ModelSerializer):
     articles = SerializerMethodField()
     class Meta:
          model = Product
-         fields = ['id', 'name', 'date_created', 'date_updated', 'category', 'articles']
+         fields = ['id', 'name', 'date_created', 'date_updated', 'category', 'articles', 'ecoscore']
 
     def get_articles(self, instance):
         queryset = instance.articles.filter(active=True)
@@ -47,3 +61,13 @@ class ArticleSerializer(ModelSerializer):
     class Meta:
         model = Article
         fields= ['id', 'name', 'price', 'date_created', 'date_updated', 'product']
+
+    def validate_price(self, value):
+        if value < 1:
+            raise ValidationError('Price must be greater than 1€')
+        return value
+
+    def validate_product(self, value):
+        if not value.active:
+            raise ValidationError('Product must be active')
+        return value

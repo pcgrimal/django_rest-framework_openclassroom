@@ -1,8 +1,9 @@
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from shop.models import Article, Category, Product
 from shop.serializer import ArticleSerializer, CategoryDetailSerializer, CategoryListSerializer, ProductDetailSerializer, ProductListSerializer
+from shop.permissions import IsAdminAuthenticated, IsPrestataireAuthenticated
 
 
 class MultipleSerializerMixin:
@@ -59,3 +60,17 @@ class ArticleViewset(ReadOnlyModelViewSet):
         if product_id is not None:
             queryset = queryset.filter(product_id=product_id)
         return queryset
+
+class AdminCategoryViewset(MultipleSerializerMixin,ModelViewSet):
+
+    serializer_class = CategoryListSerializer
+    detail_serializer_class = CategoryDetailSerializer
+    permission_classes = [IsAdminAuthenticated, IsPrestataireAuthenticated]
+
+    def get_queryset(self):
+        return Category.objects.all()
+
+class AdminArticleViewset(ModelViewSet):
+
+    serializer_class = ArticleSerializer
+    queryset = Article.objects.all()
